@@ -3,14 +3,16 @@ import {
   NotFoundException,
   ConflictException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { RegisterUserDto } from './dto/register-user.dto';
-import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
+import { OtpType } from './enums/otp-type.enum';
+import { LoginDto } from './dto/login.dto';
 
 export interface JwtPayload {
   id: number;
@@ -60,6 +62,7 @@ export class AuthService {
         userId: user.id,
         code: otp,
         expiresAt: expiry,
+        type: OtpType.REGISTRATION,
       },
     });
 
@@ -89,13 +92,13 @@ export class AuthService {
     return { accessToken };
   }
 
-  async resendOtp(email: string): Promise<{ message: string }> {
+  async resendOtp(email: string, type: OtpType): Promise<{ message: string }> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       throw new NotFoundException(`User with email ${email} not found`);
     }
 
-    await this.prisma.oTP.deleteMany({ where: { userId: user.id } });
+    await this.prisma.oTP.deleteMany({ where: { userId: user.id, type } });
 
     const otp = this.generateOtp();
     const expiry = new Date();
@@ -106,11 +109,50 @@ export class AuthService {
         userId: user.id,
         code: otp,
         expiresAt: expiry,
+        type,
       },
     });
 
     await this.mailService.sendVerificationEmail(user.email, otp);
 
     return { message: 'OTP has been resent to your email.' };
+  }
+
+  async verifyOtp(
+    email: string,
+    otp: string,
+    type: OtpType,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const storedOtp = await this.prisma.oTP.findFirst({
+      where: { userId: user.id, code: otp, type, used: false },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!storedOtp) {
+      throw new BadRequestException('Invalid or expired OTP');
+    }
+
+    if (storedOtp.expiresAt < new Date()) {
+      throw new BadRequestException('OTP expired');
+    }
+
+    await this.prisma.oTP.update({
+      where: { id: storedOtp.id },
+      data: { used: true },
+    });
+
+    if (type === OtpType.REGISTRATION) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true },
+      });
+    }
+
+    return { message: 'OTP verified successfully' };
   }
 }

@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
 import { LoginDto } from './dto/login.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { type Response } from 'express';
 
 @Controller('auth')
@@ -26,6 +27,15 @@ export class AuthController {
 
   @Post('resend-otp')
   resendOtp(@Body() resendOtpDto: ResendOtpDto) {
-    return this.authService.resendOtp(resendOtpDto.email);
+    return this.authService.resendOtp(resendOtpDto.email, resendOtpDto.type);
+  }
+
+  @Post('verify-otp')
+  verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+    return this.authService.verifyOtp(
+      verifyOtpDto.email,
+      verifyOtpDto.otp,
+      verifyOtpDto.type,
+    );
   }
 }

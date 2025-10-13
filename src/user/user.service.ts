@@ -1,3 +1,4 @@
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -29,4 +30,16 @@ export class UserService {
   async remove(id: number): Promise<User> {
     return this.prisma.user.delete({ where: { id } });
   }
+
+  async suspendUser(id: number, isSuspended: boolean): Promise<User> {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return this.prisma.user.update({
+      where: { id },
+      data: { isSuspended },
+    });
+  }
 }
+
