@@ -1,0 +1,203 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  REQUIRES_PAYMENT
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum ChatStatus {
+  OPEN
+  ACCEPTED
+  REJECTED
+  CLOSED
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password      String
+  name          String?
+  role          Role     @default(BUYER)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  products Product[] @relation("SellerProducts")
+  orders   Order[]
+  cart     Cart?
+  otps     OTP[]
+
+  buyerChats  Chat[] @relation("BuyerChats")
+  sellerChats Chat[] @relation("SellerChats")
+
+  stripeAccountId String?
+  ChatMessage     ChatMessage[]
+}
+
+model OTP {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([code])
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+}
+
+model Product {
+  id         Int      @id @default(autoincrement())
+  sellerId   Int
+  categoryId Int?
+  name       String
+  price      Float
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  seller     User        @relation("SellerProducts", fields: [sellerId], references: [id])
+  category   Category?   @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+  chats      Chat[]
+
+  @@index([sellerId])
+  @@index([categoryId])
+}
+
+model Chat {
+  id            Int        @id @default(autoincrement())
+  productId     Int
+  buyerId       Int
+  sellerId      Int
+  status        ChatStatus @default(OPEN)
+  acceptedPrice Float?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  product  Product       @relation(fields: [productId], references: [id])
+  buyer    User          @relation("BuyerChats", fields: [buyerId], references: [id])
+  seller   User          @relation("SellerChats", fields: [sellerId], references: [id])
+  messages ChatMessage[]
+
+  @@index([productId])
+  @@index([buyerId])
+  @@index([sellerId])
+}
+
+model ChatMessage {
+  id           Int      @id @default(autoincrement())
+  chatId       Int
+  senderId     Int
+  message      String? // Normal text message
+  priceOffered Float? // Price if it's a proposal
+  isProposal   Boolean  @default(false)
+  accepted     Boolean? // When receiver accepts
+  rejected     Boolean? // When receiver rejects
+  createdAt    DateTime @default(now())
+
+  chat   Chat @relation(fields: [chatId], references: [id])
+  sender User @relation(fields: [senderId], references: [id])
+}
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     CartItem[]
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int
+  productId Int
+  quantity  Int      @default(1)
+  unitPrice Float
+  addedAt   DateTime @default(now())
+
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+model Order {
+  id                    Int           @id @default(autoincrement())
+  userId                Int
+  total                 Float
+  status                OrderStatus   @default(PENDING)
+  paymentStatus         PaymentStatus @default(REQUIRES_PAYMENT)
+  stripePaymentIntentId String?
+  stripePaymentMethodId String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id])
+  items OrderItem[]
+
+  @@index([userId])
+  @@index([stripePaymentIntentId])
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int
+  unitPrice Float
+  createdAt DateTime @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
