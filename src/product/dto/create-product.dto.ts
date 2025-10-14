@@ -30,7 +30,7 @@ export class CreateProductDto {
   @IsOptional()
   imageUrl?: string;
 
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  categoryId: number;
+  categoryId: string;
 }

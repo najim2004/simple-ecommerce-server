@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
@@ -14,7 +9,7 @@ export class CartService {
 
   constructor(private prisma: PrismaService) {}
 
-  async getCart(userId: number) {
+  async getCart(userId: string) {
     this.logger.log(`Getting cart for user ID: ${userId}`);
     return this.prisma.cart.findUnique({
       where: { userId },
@@ -22,7 +17,7 @@ export class CartService {
     });
   }
 
-  async addToCart(userId: number, addToCartDto: AddToCartDto) {
+  async addToCart(userId: string, addToCartDto: AddToCartDto) {
     this.logger.log(
       `User ${userId} adding product ${addToCartDto.productId} to cart`,
     );
@@ -73,8 +68,8 @@ export class CartService {
   }
 
   async updateCartItem(
-    userId: number,
-    productId: number,
+    userId: string,
+    productId: string,
     updateCartItemDto: UpdateCartItemDto,
   ) {
     this.logger.log(
@@ -109,9 +104,6 @@ export class CartService {
         where: { cartId_productId: { cartId: cart.id, productId } },
       });
     } else {
-      this.logger.log(
-        `Updating quantity of cart item (product ${productId}) to ${quantity} for user ${userId}`,
-      );
       return this.prisma.cartItem.update({
         where: { cartId_productId: { cartId: cart.id, productId } },
         data: { quantity },
@@ -119,7 +111,7 @@ export class CartService {
     }
   }
 
-  async removeCartItem(userId: number, productId: number) {
+  async removeCartItem(userId: string, productId: string) {
     this.logger.log(
       `User ${userId} removing cart item for product ${productId}`,
     );
@@ -134,7 +126,7 @@ export class CartService {
     });
   }
 
-  async clearCart(userId: number) {
+  async clearCart(userId: string) {
     this.logger.log(`Clearing cart for user ID: ${userId}`);
     const cart = await this.prisma.cart.findUnique({ where: { userId } });
     if (!cart) {

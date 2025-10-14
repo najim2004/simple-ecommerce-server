@@ -19,20 +19,19 @@ export class CategoryService {
     return this.prisma.category.findMany();
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     this.logger.log(`Finding category with ID: ${id}`);
     return this.prisma.category.findUnique({ where: { id } });
   }
 
-  async update(id: number, updateCategoryDto: UpdateCategoryDto) {
+  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
     this.logger.log(`Updating category with ID: ${id}`);
     return this.prisma.category.update({
       where: { id },
       data: updateCategoryDto,
     });
   }
-
-  async remove(id: number) {
+  async remove(id: string) {
     this.logger.log(`Removing category with ID: ${id}`);
     return this.prisma.category.delete({ where: { id } });
   }

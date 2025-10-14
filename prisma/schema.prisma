@@ -42,28 +42,35 @@ enum ChatStatus {
   CLOSED
 }
 
+enum ProductStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
-  id            Int      @id @default(autoincrement())
-  email         String   @unique
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  email         String  @unique
   password      String
   name          String?
-  role          Role     @default(BUYER)
-  emailVerified Boolean  @default(false)
-  isSuspended   Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  role          Role    @default(BUYER)
+  emailVerified Boolean @default(false)
+  isSuspended   Boolean @default(false)
 
-  // Relations
-  products Product[] @relation("SellerProducts")
-  orders   Order[]
-  cart     Cart?
-  otps     OTP[]
+  stripeAccountId     String?
+  orders              Order[]
+  cart                Cart?
+  otps                OTP[]
+  Message             Message[]
+  products            Product[]      @relation("SellerProducts")
+  buyerConversations  Conversation[] @relation("BuyerConversations")
+  sellerConversations Conversation[] @relation("SellerConversations")
 
-  buyerChats  Chat[] @relation("BuyerChats")
-  sellerChats Chat[] @relation("SellerChats")
-
-  stripeAccountId String?
-  ChatMessage     ChatMessage[]
+  @@map("user")
 }
 
 enum OtpType {
@@ -72,140 +79,168 @@ enum OtpType {
 }
 
 model OTP {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  code      String
-  expiresAt DateTime
-  used      Boolean  @default(false)
-  type      OtpType  @default(REGISTRATION)
+  id        String   @id @default(cuid())
   createdAt DateTime @default(now())
+  expiresAt DateTime
 
-  user User @relation(fields: [userId], references: [id])
+  code String
+  type OtpType @default(REGISTRATION)
 
-  @@index([userId])
+  userEmail String
+  user      User   @relation(fields: [userEmail], references: [email])
+
+  @@index([userEmail])
   @@index([code])
+  @@map("otp")
 }
 
 model Category {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(cuid())
   name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   products Product[]
+
+  @@index([name])
+  @@map("category")
 }
 
 model Product {
-  id         Int      @id @default(autoincrement())
-  sellerId   Int
-  categoryId Int?
-  name       String
-  price      Float
-  color      String
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  seller     User        @relation("SellerProducts", fields: [sellerId], references: [id])
-  category   Category?   @relation(fields: [categoryId], references: [id])
-  orderItems OrderItem[]
-  cartItems  CartItem[]
-  chats      Chat[]
+  sellerId String
+  seller   User   @relation("SellerProducts", fields: [sellerId], references: [id])
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  name   String
+  price  Float
+  color  String
+  active Boolean @default(true)
+  status ProductStatus @default(DRAFT)
+
+  orderItems   OrderItem[]
+  cartItems    CartItem[]
+  conversation Conversation[]
 
   @@index([sellerId])
   @@index([categoryId])
+  @@map("product")
 }
 
-model Chat {
-  id            Int        @id @default(autoincrement())
-  productId     Int
-  buyerId       Int
-  sellerId      Int
-  status        ChatStatus @default(OPEN)
-  acceptedPrice Float?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  product  Product       @relation(fields: [productId], references: [id])
-  buyer    User          @relation("BuyerChats", fields: [buyerId], references: [id])
-  seller   User          @relation("SellerChats", fields: [sellerId], references: [id])
-  messages ChatMessage[]
+  acceptedPrice Float?
+  status        ChatStatus @default(OPEN)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  buyerId   String
+  buyer     User    @relation("BuyerConversations", fields: [buyerId], references: [id])
+
+  sellerId String
+  seller   User   @relation("SellerConversations", fields: [sellerId], references: [id])
+
+  messages Message[]
 
   @@index([productId])
   @@index([buyerId])
   @@index([sellerId])
+  @@map("conversation")
 }
 
-model ChatMessage {
-  id           Int      @id @default(autoincrement())
-  chatId       Int
-  senderId     Int
+model Message {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+
   message      String? // Normal text message
   priceOffered Float? // Price if it's a proposal
   isProposal   Boolean  @default(false)
   accepted     Boolean? // When receiver accepts
   rejected     Boolean? // When receiver rejects
-  createdAt    DateTime @default(now())
 
-  chat   Chat @relation(fields: [chatId], references: [id])
-  sender User @relation(fields: [senderId], references: [id])
+  @@map("message")
 }
 
 model Cart {
-  id        Int        @id @default(autoincrement())
-  userId    Int        @unique
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  items     CartItem[]
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  items CartItem[]
+
+  @@index([userId])
+  @@map("cart")
 }
 
 model CartItem {
-  id        Int      @id @default(autoincrement())
-  cartId    Int
-  productId Int
-  quantity  Int      @default(1)
+  id      String   @id @default(cuid())
+  addedAt DateTime @default(now())
+
+  cartId String
+  cart   Cart   @relation(fields: [cartId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity  Int   @default(1)
   unitPrice Float
-  addedAt   DateTime @default(now())
 
-  cart    Cart    @relation(fields: [cartId], references: [id])
-  product Product @relation(fields: [productId], references: [id])
-
+  @@unique([cartId, productId])
   @@index([cartId])
   @@index([productId])
-  @@unique([cartId, productId])
+  @@map("cart_item")
 }
 
 model Order {
-  id                    Int           @id @default(autoincrement())
-  userId                Int
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
   total                 Float
   status                OrderStatus   @default(PENDING)
   paymentStatus         PaymentStatus @default(REQUIRES_PAYMENT)
   stripePaymentIntentId String?
   stripePaymentMethodId String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
 
-  user  User        @relation(fields: [userId], references: [id])
   items OrderItem[]
 
   @@index([userId])
   @@index([stripePaymentIntentId])
+  @@map("order")
 }
 
 model OrderItem {
-  id        Int      @id @default(autoincrement())
-  orderId   Int
-  productId Int
-  quantity  Int
-  unitPrice Float
+  id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
-  order   Order   @relation(fields: [orderId], references: [id])
-  product Product @relation(fields: [productId], references: [id])
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity  Int
+  unitPrice Float
 
   @@index([orderId])
   @@index([productId])
+  @@map("order_item")
 }

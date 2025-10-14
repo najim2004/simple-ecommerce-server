@@ -38,7 +38,7 @@ export class CartController {
   ) {
     return this.cartService.updateCartItem(
       req.user.id,
-      +productId,
+      productId,
       updateCartItemDto,
     );
   }
@@ -48,7 +48,7 @@ export class CartController {
     @Req() req: { user: User },
     @Param('productId') productId: string,
   ) {
-    return this.cartService.removeCartItem(req.user.id, +productId);
+    return this.cartService.removeCartItem(req.user.id, productId);
   }
 
   @Delete()

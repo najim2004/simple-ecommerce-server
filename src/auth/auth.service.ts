@@ -16,7 +16,7 @@ import { OtpType } from './enums/otp-type.enum';
 import { LoginDto } from './dto/login.dto';
 
 export interface JwtPayload {
-  id: number;
+  id: string;
   role: Role;
 }
 
@@ -68,7 +68,7 @@ export class AuthService {
 
     await this.prisma.oTP.create({
       data: {
-        userId: user.id,
+        userEmail: email,
         code: otp,
         expiresAt: expiry,
         type: OtpType.REGISTRATION,
@@ -115,7 +115,7 @@ export class AuthService {
       throw new NotFoundException(`User with email ${email} not found`);
     }
 
-    await this.prisma.oTP.deleteMany({ where: { userId: user.id, type } });
+    await this.prisma.oTP.deleteMany({ where: { userEmail: email, type } });
 
     const otp = this.generateOtp();
     const expiry = new Date();
@@ -123,7 +123,7 @@ export class AuthService {
 
     await this.prisma.oTP.create({
       data: {
-        userId: user.id,
+        userEmail: email,
         code: otp,
         expiresAt: expiry,
         type,
@@ -151,7 +151,7 @@ export class AuthService {
     }
 
     const storedOtp = await this.prisma.oTP.findFirst({
-      where: { userId: user.id, code: otp, type, used: false },
+      where: { userEmail: email, code: otp, type },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -169,10 +169,8 @@ export class AuthService {
       throw new BadRequestException('OTP expired');
     }
 
-    await this.prisma.oTP.update({
-      where: { id: storedOtp.id },
-      data: { used: true },
-    });
+    await this.prisma.oTP.deleteMany({ where: { userEmail: email, type } });
+    this.logger.log(`All OTP deleted successfully for user: ${email}`);
 
     if (type === OtpType.REGISTRATION) {
       await this.prisma.user.update({
