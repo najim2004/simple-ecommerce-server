@@ -10,7 +10,9 @@ export class ProductService {
   constructor(private prisma: PrismaService) {}
 
   async create(createProductDto: CreateProductDto & { sellerId: number }) {
-    this.logger.log(`Creating product: ${createProductDto.name} by seller ${createProductDto.sellerId}`);
+    this.logger.log(
+      `Creating product: ${createProductDto.name} by seller ${createProductDto.sellerId}`,
+    );
     return this.prisma.product.create({ data: createProductDto });
   }
 

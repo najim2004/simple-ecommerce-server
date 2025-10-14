@@ -44,7 +44,9 @@ export class AuthService {
       where: { email },
     });
     if (existingUser) {
-      this.logger.warn(`Registration failed: User with email ${email} already exists`);
+      this.logger.warn(
+        `Registration failed: User with email ${email} already exists`,
+      );
       throw new ConflictException('User with this email already exists');
     }
 
@@ -104,7 +106,9 @@ export class AuthService {
   }
 
   async resendOtp(email: string, type: OtpType): Promise<{ message: string }> {
-    this.logger.log(`Attempting to resend OTP for user: ${email}, type: ${type}`);
+    this.logger.log(
+      `Attempting to resend OTP for user: ${email}, type: ${type}`,
+    );
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       this.logger.warn(`Resend OTP failed: User ${email} not found`);
@@ -137,7 +141,9 @@ export class AuthService {
     otp: string,
     type: OtpType,
   ): Promise<{ message: string }> {
-    this.logger.log(`Attempting to verify OTP for user: ${email}, type: ${type}`);
+    this.logger.log(
+      `Attempting to verify OTP for user: ${email}, type: ${type}`,
+    );
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       this.logger.warn(`OTP verification failed: User ${email} not found`);
@@ -150,12 +156,16 @@ export class AuthService {
     });
 
     if (!storedOtp) {
-      this.logger.warn(`OTP verification failed: Invalid or expired OTP for user ${email}`);
+      this.logger.warn(
+        `OTP verification failed: Invalid or expired OTP for user ${email}`,
+      );
       throw new BadRequestException('Invalid or expired OTP');
     }
 
     if (storedOtp.expiresAt < new Date()) {
-      this.logger.warn(`OTP verification failed: OTP expired for user ${email}`);
+      this.logger.warn(
+        `OTP verification failed: OTP expired for user ${email}`,
+      );
       throw new BadRequestException('OTP expired');
     }
 
