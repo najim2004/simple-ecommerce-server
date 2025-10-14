@@ -1,7 +1,7 @@
 import { IsBoolean, IsNotEmpty } from 'class-validator';
 
-export class UpdateUserStatusDto {
+export class AcceptRejectProposalDto {
   @IsBoolean()
   @IsNotEmpty()
-  isSuspended: boolean;
+  accepted: boolean;
 }

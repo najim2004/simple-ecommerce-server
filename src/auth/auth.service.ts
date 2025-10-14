@@ -4,6 +4,7 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
@@ -21,6 +22,8 @@ export interface JwtPayload {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
@@ -34,12 +37,14 @@ export class AuthService {
   async register(
     registerUserDto: RegisterUserDto,
   ): Promise<{ message: string }> {
+    this.logger.log(`Attempting to register user: ${registerUserDto.email}`);
     const { email, password, name } = registerUserDto;
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
     if (existingUser) {
+      this.logger.warn(`Registration failed: User with email ${email} already exists`);
       throw new ConflictException('User with this email already exists');
     }
 
@@ -52,6 +57,8 @@ export class AuthService {
         name,
       },
     });
+
+    this.logger.log(`User ${user.email} registered successfully. Sending OTP.`);
 
     const otp = this.generateOtp();
     const expiry = new Date();
@@ -74,27 +81,33 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto): Promise<{ accessToken: string }> {
+    this.logger.log(`Attempting to log in user: ${loginDto.email}`);
     const { email, password } = loginDto;
 
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
+      this.logger.warn(`Login failed: User ${email} not found`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      this.logger.warn(`Login failed: Invalid password for user ${email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const payload: JwtPayload = { id: user.id, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
 
+    this.logger.log(`User ${email} logged in successfully.`);
     return { accessToken };
   }
 
   async resendOtp(email: string, type: OtpType): Promise<{ message: string }> {
+    this.logger.log(`Attempting to resend OTP for user: ${email}, type: ${type}`);
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
+      this.logger.warn(`Resend OTP failed: User ${email} not found`);
       throw new NotFoundException(`User with email ${email} not found`);
     }
 
@@ -115,6 +128,7 @@ export class AuthService {
 
     await this.mailService.sendVerificationEmail(user.email, otp);
 
+    this.logger.log(`OTP resent successfully for user: ${email}`);
     return { message: 'OTP has been resent to your email.' };
   }
 
@@ -123,8 +137,10 @@ export class AuthService {
     otp: string,
     type: OtpType,
   ): Promise<{ message: string }> {
+    this.logger.log(`Attempting to verify OTP for user: ${email}, type: ${type}`);
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
+      this.logger.warn(`OTP verification failed: User ${email} not found`);
       throw new NotFoundException('User not found');
     }
 
@@ -134,10 +150,12 @@ export class AuthService {
     });
 
     if (!storedOtp) {
+      this.logger.warn(`OTP verification failed: Invalid or expired OTP for user ${email}`);
       throw new BadRequestException('Invalid or expired OTP');
     }
 
     if (storedOtp.expiresAt < new Date()) {
+      this.logger.warn(`OTP verification failed: OTP expired for user ${email}`);
       throw new BadRequestException('OTP expired');
     }
 
@@ -153,6 +171,7 @@ export class AuthService {
       });
     }
 
+    this.logger.log(`OTP verified successfully for user: ${email}`);
     return { message: 'OTP verified successfully' };
   }
 }
