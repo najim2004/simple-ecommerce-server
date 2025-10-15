@@ -8,21 +8,25 @@ import {
   Delete,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import { User, Role } from '@prisma/client';
+import { User, Role, ProductStatus } from '@prisma/client';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/auth/roles.decorator';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
+
+import { OptionalJwtAuthGuard } from 'src/auth/optional-jwt-auth.guard';
 
 @Controller('product')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SELLER)
   @Post()
   create(
     @Req() req: { user: User },
@@ -35,22 +39,54 @@ export class ProductController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
-  findAll(@Req() req: { user: User }) {
-    return this.productService.findAll(req.user.role, req.user.id);
+  @UseGuards(OptionalJwtAuthGuard)
+  findAll(
+    @Req() req: { user: User },
+    @Query('sellerId') sellerId?: string,
+    @Query('status') status?: ProductStatus,
+    @Query('myProducts') myProducts?: boolean,
+  ) {
+    if (req.user) {
+      if (req.user.role === Role.ADMIN) {
+        return this.productService.findAll(
+          req.user.role,
+          sellerId,
+          status,
+          myProducts,
+        );
+      } else {
+        return this.productService.findAll(
+          req.user.role,
+          req.user.id,
+          status,
+          myProducts,
+        );
+      }
+    } else {
+      return this.productService.findAll();
+    }
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  findOne(@Param('id') id: string, @Req() req: { user: User }) {
+    return this.productService.findOne(id, req.user);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productService.update(id, updateProductDto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SELLER)
+  update(
+    @Param('id') id: string,
+    @Body() updateProductDto: UpdateProductDto,
+    @Req() req: { user: User },
+  ) {
+    return this.productService.update(id, updateProductDto, req.user);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SELLER)
   remove(@Param('id') id: string) {
     return this.productService.remove(id);
   }

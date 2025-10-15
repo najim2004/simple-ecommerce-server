@@ -28,7 +28,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
       "name": "Test Seller"
     }
     ```
-*   **Expected Response:** `201 Created` with a message indicating successful registration and OTP sent.
+*   **Expected Response:** `201 Created` with the created user object (excluding password).
 
 ### 1.2. Login User
 
@@ -42,21 +42,21 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
       "password": "password123"
     }
     ```
-*   **Expected Response:** `200 OK` with `accessToken` in the response body and a `jwt` cookie set.
+*   **Expected Response:** `200 OK` with `accessToken` in the response body.
     ```json
     {
-      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      "message": "Login successful",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     }
     ```
-    **Note:** The `accessToken` should be used in the `Authorization` header as `Bearer <accessToken>` for subsequent authenticated requests, or will be automatically sent via the `jwt` cookie.
 
 ### 1.3. Logout User
 
 *   **Method:** `POST`
 *   **URL:** `/auth/logout`
-*   **Headers:** `Authorization: Bearer <jwt_token>` (or `jwt` cookie)
+*   **Headers:** `Authorization: Bearer <jwt_token>`
 *   **Request Body:** None
-*   **Expected Response:** `200 OK` with a message indicating successful logout. The `jwt` cookie will be cleared.
+*   **Expected Response:** `200 OK` with a message indicating successful logout.
 
 ### 1.4. Resend OTP
 
@@ -67,7 +67,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
     ```json
     {
       "email": "testbuyer@example.com",
-      "type": "EMAIL_VERIFICATION" // or "PASSWORD_RESET"
+      "type": "REGISTRATION" // or "PASSWORD_RESET"
     }
     ```
 *   **Expected Response:** `200 OK` with a message indicating OTP resent.
@@ -82,7 +82,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
     {
       "email": "testbuyer@example.com",
       "otp": "123456",
-      "type": "EMAIL_VERIFICATION" // or "PASSWORD_RESET"
+      "type": "REGISTRATION" // or "PASSWORD_RESET"
     }
     ```
 *   **Expected Response:** `200 OK` with a message indicating successful OTP verification.
@@ -95,7 +95,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 
 *   **Method:** `GET`
 *   **URL:** `/user/me`
-*   **Headers:** `Authorization: Bearer <jwt_token>` (or `jwt` cookie)
+*   **Headers:** `Authorization: Bearer <jwt_token>`
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with the authenticated user's profile details (excluding password).
 
@@ -103,15 +103,15 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 
 *   **Method:** `GET`
 *   **URL:** `/user`
-*   **Headers:** `Authorization: Bearer <admin_jwt_token>` (or `jwt` cookie)
+*   **Headers:** `Authorization: Bearer <admin_jwt_token>`
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with an array of all user objects.
 
-### 2.3. Get User by ID
+### 2.3. Get User by ID (Admin Only)
 
 *   **Method:** `GET`
 *   **URL:** `/user/:id` (e.g., `/user/clsdj234j234j234j`)
-*   **Headers:** (No specific headers required)
+*   **Headers:** `Authorization: Bearer <admin_jwt_token>`
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with the user object matching the ID.
 
@@ -121,7 +121,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 *   **URL:** `/user/:id` (e.g., `/user/clsdj234j234j234j`)
 *   **Headers:**
     *   `Content-Type: application/json`
-    *   `Authorization: Bearer <jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <jwt_token>`
 *   **Request Body (JSON):**
     ```json
     {
@@ -129,12 +129,15 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
     }
     ```
 *   **Expected Response:** `200 OK` with the updated user object.
+*   **Authorization:**
+    *   An admin can update any user.
+    *   A non-admin user can only update their own profile.
 
-### 2.5. Delete User by ID
+### 2.5. Delete User by ID (Admin Only)
 
 *   **Method:** `DELETE`
 *   **URL:** `/user/:id` (e.g., `/user/clsdj234j234j234j`)
-*   **Headers:** `Authorization: Bearer <jwt_token>` (or `jwt` cookie)
+*   **Headers:** `Authorization: Bearer <admin_jwt_token>`
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with the deleted user object.
 
@@ -144,7 +147,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 *   **URL:** `/user/:id/suspend` (e.g., `/user/clsdj234j234j234j/suspend`)
 *   **Headers:**
     *   `Content-Type: application/json`
-    *   `Authorization: Bearer <admin_jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <admin_jwt_token>`
 *   **Request Body (JSON):**
     ```json
     {
@@ -163,13 +166,11 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 *   **URL:** `/category`
 *   **Headers:**
     *   `Content-Type: application/json`
-    *   `Authorization: Bearer <admin_jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <admin_jwt_token>`
 *   **Request Body (JSON):**
     ```json
     {
-      "name": "Electronics",
-      "slug": "electronics",
-      "description": "Electronic gadgets and devices"
+      "name": "Electronics"
     }
     ```
 *   **Expected Response:** `201 Created` with the created category object.
@@ -178,7 +179,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 
 *   **Method:** `GET`
 *   **URL:** `/category`
-*   **Headers:** (No specific headers required for public access, but can be authenticated)
+*   **Headers:** None
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with an array of category objects.
 
@@ -186,7 +187,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 
 *   **Method:** `GET`
 *   **URL:** `/category/:id` (e.g., `/category/clsdj234j234j234j`)
-*   **Headers:** (No specific headers required)
+*   **Headers:** None
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with the category object matching the ID.
 
@@ -196,7 +197,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 *   **URL:** `/category/:id` (e.g., `/category/clsdj234j234j234j`)
 *   **Headers:**
     *   `Content-Type: application/json`
-    *   `Authorization: Bearer <admin_jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <admin_jwt_token>`
 *   **Request Body (JSON):**
     ```json
     {
@@ -209,7 +210,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 
 *   **Method:** `DELETE`
 *   **URL:** `/category/:id` (e.g., `/category/clsdj234j234j234j`)
-*   **Headers:** `Authorization: Bearer <admin_jwt_token>` (or `jwt` cookie)
+*   **Headers:** `Authorization: Bearer <admin_jwt_token>`
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with the deleted category object.
 
@@ -223,15 +224,14 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 *   **URL:** `/product`
 *   **Headers:**
     *   `Content-Type: application/json`
-    *   `Authorization: Bearer <seller_jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <seller_jwt_token>`
 *   **Request Body (JSON):**
     ```json
     {
       "name": "Smartphone X",
       "slug": "smartphone-x",
-      "description": "Latest model smartphone with advanced features.",
+      "color": "Black",
       "price": 799.99,
-      "imageUrl": "http://example.com/image.jpg",
       "categoryId": "<id_of_electronics_category>"
     }
     ```
@@ -241,29 +241,48 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 
 *   **Method:** `GET`
 *   **URL:** `/product`
-*   **Headers:**
-    *   `Authorization: Bearer <jwt_token>` (or `jwt` cookie) - Optional, but affects results based on role.
+*   **Query Parameters:**
+    *   `myProducts` (optional, seller only): Set to `true` to get all products for the authenticated seller.
+    *   `sellerId` (optional, admin only): Filter products by seller ID.
+    *   `status` (optional, admin only): Filter products by status (`DRAFT`, `PENDING`, `APPROVED`, `REJECTED`).
+*   **Headers:** `Authorization: Bearer <jwt_token>` (optional)
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with an array of product objects.
+    *   **Public (no token):** Only `APPROVED` products.
     *   **As Buyer:** Only `APPROVED` products.
-    *   **As Seller:** All products posted by that seller (DRAFT, PENDING, APPROVED, REJECTED).
-    *   **As Admin:** All products (DRAFT, PENDING, APPROVED, REJECTED).
+    *   **As Seller:**
+        *   Without `myProducts=true`: Only `APPROVED` products.
+        *   With `myProducts=true`: All products posted by that seller.
+    *   **As Admin:** All products. Can be filtered by `sellerId` and `status`.
 
 ### 4.3. Get Product by ID
 
 *   **Method:** `GET`
 *   **URL:** `/product/:id` (e.g., `/product/clsdj234j234j234j`)
-*   **Headers:** (No specific headers required)
+*   **Headers:** `Authorization: Bearer <jwt_token>` (optional)
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with the product object matching the ID.
+*   **Authorization:**
+    *   Public users can only see `APPROVED` products.
+    *   The seller of the product can see it regardless of status.
+    *   An admin can see any product regardless of status.
 
-### 4.4. Update Product by ID
+### 4.4. Get Product Details
+
+*   **Method:** `GET`
+*   **URL:** `/product/:id/details` (e.g., `/product/clsdj234j234j234j/details`)
+*   **Headers:** `Authorization: Bearer <jwt_token>`
+*   **Request Body:** None
+*   **Expected Response:** `200 OK` with the full product object matching the ID.
+*   **Authorization:** Only the seller of the product and admins can access this endpoint.
+
+### 4.5. Update Product by ID (Seller Only)
 
 *   **Method:** `PATCH`
 *   **URL:** `/product/:id` (e.g., `/product/clsdj234j234j234j`)
 *   **Headers:**
     *   `Content-Type: application/json`
-    *   `Authorization: Bearer <seller_jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <seller_jwt_token>`
 *   **Request Body (JSON):**
     ```json
     {
@@ -272,21 +291,21 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
     ```
 *   **Expected Response:** `200 OK` with the updated product object.
 
-### 4.5. Delete Product by ID
+### 4.6. Delete Product by ID (Seller Only)
 
 *   **Method:** `DELETE`
 *   **URL:** `/product/:id` (e.g., `/product/clsdj234j234j234j`)
-*   **Headers:** `Authorization: Bearer <seller_jwt_token>` (or `jwt` cookie)
+*   **Headers:** `Authorization: Bearer <seller_jwt_token>`
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with the deleted product object.
 
-### 4.6. Update Product Status (Admin Only)
+### 4.7. Update Product Status (Admin Only)
 
 *   **Method:** `PATCH`
 *   **URL:** `/product/:id/status` (e.g., `/product/clsdj234j234j234j/status`)
 *   **Headers:**
     *   `Content-Type: application/json`
-    *   `Authorization: Bearer <admin_jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <admin_jwt_token>`
 *   **Request Body (JSON):**
     ```json
     {
@@ -306,7 +325,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 *   **URL:** `/cart`
 *   **Headers:**
     *   `Content-Type: application/json`
-    *   `Authorization: Bearer <buyer_jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <buyer_jwt_token>`
 *   **Request Body (JSON):**
     ```json
     {
@@ -321,7 +340,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 *   **Method:** `GET`
 *   **URL:** `/cart`
 *   **Headers:**
-    *   `Authorization: Bearer <buyer_jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <buyer_jwt_token>`
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with the user's cart object, including its items.
 
@@ -331,7 +350,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 *   **URL:** `/cart/:productId` (e.g., `/cart/clsdj234j234j234j`)
 *   **Headers:**
     *   `Content-Type: application/json`
-    *   `Authorization: Bearer <buyer_jwt_token>` (or `jwt` cookie)
+    *   `Authorization: Bearer <buyer_jwt_token>`
 *   **Request Body (JSON):**
     ```json
     {
@@ -344,7 +363,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 
 *   **Method:** `DELETE`
 *   **URL:** `/cart/:productId` (e.g., `/cart/clsdj234j234j234j`)
-*   **Headers:** `Authorization: Bearer <buyer_jwt_token>` (or `jwt` cookie)
+*   **Headers:** `Authorization: Bearer <buyer_jwt_token>`
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with the deleted cart item.
 
@@ -352,7 +371,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 
 *   **Method:** `DELETE`
 *   **URL:** `/cart`
-*   **Headers:** `Authorization: Bearer <buyer_jwt_token>` (or `jwt` cookie)
+*   **Headers:** `Authorization: Bearer <buyer_jwt_token>`
 *   **Request Body:** None
 *   **Expected Response:** `200 OK` with a message indicating the cart was cleared.
 
@@ -360,9 +379,9 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 
 ## 6. Conversation (Chat) Endpoints (WebSockets)
 
-**WebSocket URL:** `ws://localhost:3000/socket.io/` (or `wss://` for secure)
+**WebSocket URL:** `ws://localhost:3000`
 
-**Authentication:** The JWT token should be sent in the `jwt` cookie during the WebSocket handshake.
+**Authentication:** The JWT token should be sent in the `auth` object during the WebSocket handshake.
 
 ### 6.1. Create Conversation
 
@@ -379,10 +398,7 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 ### 6.2. Join Conversation
 
 *   **Event:** `joinConversation`
-*   **Payload (JSON):**
-    ```json
-    "<id_of_conversation>"
-    ```
+*   **Payload (string):** `"<id_of_conversation>"`
 *   **Expected Event:** `conversationMessages` with an array of messages in the conversation.
 
 ### 6.3. Send Message
@@ -434,29 +450,3 @@ This document outlines the key API endpoints for the simple-ecommerce applicatio
 *   **Event:** `getConversations`
 *   **Payload:** None
 *   **Expected Event:** `userConversations` with an array of conversation objects for the authenticated user.
-
----
-
-## Dummy Data Generation (Conceptual)
-
-To test effectively, you'll need to create some dummy data in your database.
-
-1.  **Register Users:**
-    *   Register a `BUYER` user (e.g., `testbuyer@example.com`, `password123`).
-    *   Register a `SELLER` user (e.g., `testseller@example.com`, `password123`).
-    *   Manually update one of the user's roles to `ADMIN` in the database (e.g., `testadmin@example.com`, `password123`) if needed, or create a separate registration flow for admins.
-
-2.  **Create Categories:**
-    *   Log in as an `ADMIN`.
-    *   Use the "Create Category" endpoint to create a few categories (e.g., "Electronics", "Clothing"). Note down their IDs.
-
-3.  **Create Products:**
-    *   Log in as a `SELLER`.
-    *   Use the "Create Product" endpoint to create several products, associating them with the created categories. Note down their IDs.
-    *   Initially, these products will have `status: DRAFT`.
-
-4.  **Approve Products (Admin):**
-    *   Log in as an `ADMIN`.
-    *   Use the "Update Product Status" endpoint to change some product statuses from `DRAFT` to `PENDING`, and then from `PENDING` to `APPROVED` or `REJECTED`.
-
-This setup will allow you to test the various roles and product statuses.

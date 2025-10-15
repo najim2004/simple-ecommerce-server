@@ -23,10 +23,13 @@ interface AuthenticatedSocket extends Socket {
   };
 }
 
+import { Logger } from '@nestjs/common';
+
 @WebSocketGateway({ cors: { origin: '*' } })
 export class ConversationGateway {
   @WebSocketServer()
   server: Server;
+  private readonly logger = new Logger(ConversationGateway.name);
 
   constructor(private readonly conversationService: ConversationService) {}
 
@@ -37,6 +40,7 @@ export class ConversationGateway {
     @MessageBody() createConversationDto: CreateConversationDto,
     @ConnectedSocket() socket: Socket,
   ) {
+    this.logger.log('createConversation');
     const client = socket as AuthenticatedSocket;
 
     const userId: string = client.data.user.id.toString();
@@ -57,6 +61,7 @@ export class ConversationGateway {
     @MessageBody() conversationId: string,
     @ConnectedSocket() socket: Socket,
   ) {
+    this.logger.log(`joinConversation: ${conversationId}`);
     const client = socket as AuthenticatedSocket;
 
     const messages =
@@ -76,6 +81,7 @@ export class ConversationGateway {
     @MessageBody() data: { conversationId: string; message: SendMessageDto },
     @ConnectedSocket() socket: Socket,
   ) {
+    this.logger.log(`sendMessage: ${data.conversationId}`);
     const client = socket as AuthenticatedSocket;
 
     const userId: string = client.data.user.id.toString();
@@ -96,6 +102,7 @@ export class ConversationGateway {
     @MessageBody() data: { conversationId: string; proposal: ProposePriceDto },
     @ConnectedSocket() socket: Socket,
   ) {
+    this.logger.log(`proposePrice: ${data.conversationId}`);
     const client = socket as AuthenticatedSocket;
 
     const userId: string = client.data.user.id.toString();
@@ -123,6 +130,7 @@ export class ConversationGateway {
     },
     @ConnectedSocket() socket: Socket,
   ) {
+    this.logger.log(`acceptRejectProposal: ${data.conversationId}`);
     const client = socket as AuthenticatedSocket;
 
     const userId: string = client.data.user.id.toString();
@@ -143,6 +151,7 @@ export class ConversationGateway {
   @UseGuards(WsJwtAuthGuard)
   @SubscribeMessage('getConversations')
   async getConversations(@ConnectedSocket() socket: Socket) {
+    this.logger.log('getConversations');
     const client = socket as AuthenticatedSocket;
 
     const userId: string = client.data.user.id.toString();

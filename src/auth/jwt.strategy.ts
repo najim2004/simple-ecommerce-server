@@ -13,13 +13,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    const cookieExtractor = (req: Request) =>
-      (req?.cookies?.jwt ?? null) as string;
+    // const cookieExtractor = (req: Request) =>
+    //   (req?.cookies?.jwt ?? null) as string;
     const bearerExtractor: JwtExtractor =
       ExtractJwt.fromAuthHeaderAsBearerToken() as JwtExtractor;
     super({
       jwtFromRequest: (req: Request) =>
-        cookieExtractor(req) || bearerExtractor(req),
+        // cookieExtractor(req) ||
+        bearerExtractor(req),
       secretOrKey: process.env.JWT_SECRET!,
     });
   }

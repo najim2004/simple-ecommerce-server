@@ -11,7 +11,7 @@ import { MailService } from '../mail/mail.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { Role } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { OtpType } from './enums/otp-type.enum';
 import { LoginDto } from './dto/login.dto';
 
@@ -34,9 +34,15 @@ export class AuthService {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
+  private excludePassword(user: User): Omit<User, 'password'> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
   async register(
     registerUserDto: RegisterUserDto,
-  ): Promise<{ message: string }> {
+  ): Promise<Omit<User, 'password'> | null> {
     this.logger.log(`Attempting to register user: ${registerUserDto.email}`);
     const { email, password, name } = registerUserDto;
 
@@ -50,36 +56,41 @@ export class AuthService {
       throw new ConflictException('User with this email already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-      },
-    });
+      const user = await this.prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+        },
+      });
 
-    this.logger.log(`User ${user.email} registered successfully. Sending OTP.`);
+      this.logger.log(
+        `User ${user.email} registered successfully. Sending OTP.`,
+      );
 
-    const otp = this.generateOtp();
-    const expiry = new Date();
-    expiry.setMinutes(expiry.getMinutes() + 10);
+      const otp = this.generateOtp();
+      const expiry = new Date();
+      expiry.setMinutes(expiry.getMinutes() + 10);
 
-    await this.prisma.oTP.create({
-      data: {
-        userEmail: email,
-        code: otp,
-        expiresAt: expiry,
-        type: OtpType.REGISTRATION,
-      },
-    });
+      await this.prisma.oTP.create({
+        data: {
+          userEmail: email,
+          code: otp,
+          expiresAt: expiry,
+          type: OtpType.REGISTRATION,
+        },
+      });
 
-    await this.mailService.sendVerificationEmail(user.email, otp);
+      await this.mailService.sendVerificationEmail(user.email, otp);
 
-    return {
-      message: 'User created successfully. Please check your email for OTP.',
-    };
+      return this.excludePassword(user);
+    } catch (error) {
+      this.logger.error(`Registration failed: ${(error as Error).message}`);
+      throw new BadRequestException('Could not complete registration.');
+    }
   }
 
   async login(loginDto: LoginDto): Promise<{ accessToken: string }> {

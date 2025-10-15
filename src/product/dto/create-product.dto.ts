@@ -7,9 +7,6 @@ export class CreateProductDto {
 
   @IsString()
   @IsNotEmpty()
-  slug: string;
-  @IsString()
-  @IsNotEmpty()
   color: string;
 
   @IsNumber()

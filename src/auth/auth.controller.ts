@@ -27,13 +27,10 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(
-    @Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async login(@Body() loginDto: LoginDto) {
     const { accessToken } = await this.authService.login(loginDto);
-    res.cookie('jwt', accessToken, { httpOnly: true });
-    return { message: 'Login successful' };
+
+    return { message: 'Login successful', token: accessToken };
   }
 
   @Post('resend-otp')
