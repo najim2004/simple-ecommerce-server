@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { User } from '@prisma/client';
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(): Promise<User[]> {
@@ -39,5 +41,28 @@ export class UserService {
       where: { id },
       data: { isSuspended },
     });
+  }
+
+  async getProfile(userId: string) {
+    this.logger.log(`Fetching profile for user ID: ${userId}`);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        emailVerified: true,
+        isSuspended: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      this.logger.error(`User with ID ${userId} not found for profile fetch.`);
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    return user;
   }
 }

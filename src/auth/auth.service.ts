@@ -182,4 +182,9 @@ export class AuthService {
     this.logger.log(`OTP verified successfully for user: ${email}`);
     return { message: 'OTP verified successfully' };
   }
+
+  logout(userId: string): { message: string } {
+    this.logger.log(`User ${userId} logged out.`);
+    return { message: 'Logged out successfully' };
+  }
 }

@@ -1,10 +1,21 @@
-import { Controller, Post, Body, Res } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { type Response } from 'express';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { User } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -37,5 +48,17 @@ export class AuthController {
       verifyOtpDto.otp,
       verifyOtpDto.type,
     );
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  logout(
+    @Req() req: { user: User },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = this.authService.logout(req.user.id);
+    res.clearCookie('jwt');
+    return result;
   }
 }
