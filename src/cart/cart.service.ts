@@ -7,6 +7,7 @@ import {
 import { PrismaService } from 'prisma/prisma.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
+import { ProductStatus } from '@prisma/client';
 
 @Injectable()
 export class CartService {
@@ -37,7 +38,7 @@ export class CartService {
       }
 
       const product = await this.prisma.product.findUnique({
-        where: { id: productId },
+        where: { id: productId, status: ProductStatus.APPROVED },
       });
       if (!product) {
         this.logger.error(
@@ -73,7 +74,9 @@ export class CartService {
       }
     } catch (error) {
       this.logger.error(`Failed to add to cart: ${(error as Error).message}`);
-      throw new BadRequestException('Could not add to cart.');
+      throw new BadRequestException(
+        (error as Error).message ?? 'Could not add to cart.',
+      );
     }
   }
 
